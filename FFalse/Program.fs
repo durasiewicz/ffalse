@@ -1,5 +1,5 @@
 ﻿[<Literal>]
-let Pick = 'ø';
+let PickCharacter = 'ø';
 
 type TokenType =
     | OpenSquareBracket
@@ -32,13 +32,48 @@ type TokenType =
     | Pick
     | Section
 
+let parseCharacter character =
+    match character with
+    | '[' -> Some OpenSquareBracket
+    | ']' -> Some CloseSquareBracket
+    | ':' -> Some Colon
+    | ';' -> Some Semicolon
+    | '+' -> Some Plus
+    | '-' -> Some Minus
+    | '*' -> Some Asterisk
+    | '/' -> Some Slash
+    | '=' -> Some Equals
+    | '>' -> Some GreaterThan
+    | '&' -> Some Ampersand
+    | '|' -> Some Bar
+    | '$' -> Some Dollar
+    | '%' -> Some Percent
+    | '\\' -> Some Backslash
+    | '@' -> Some At
+    | '?' -> Some Question
+    | '!' -> Some Exclamation
+    | '~' -> Some Tilde
+    | '.' -> Some Dot
+    | ',' -> Some Comma
+    | '_' -> Some Underscore
+    | '#' -> Some Hash
+    | '^' -> Some Caret
+    | PickCharacter -> Some Pick
+    | '§' -> Some Section
+    | _ -> None
+   
 let lex code =
     let rec doLex code tokens =
         match code with
-        | head :: tail ->
-            printfn $"%c{head} "                
-            doLex tail tokens
-        | [] -> ()
-    doLex (List.ofSeq code)
+        | head :: tail -> 
+            match parseCharacter head with
+            | Some t -> doLex tail (t :: tokens)
+            | None -> doLex tail tokens            
+        | [] -> tokens
+        
+    let tokens = List.rev (doLex (List.ofSeq code) [])
     
-lex "{  }" |> ignore
+    for element in tokens do
+        printf "%A " element
+    
+lex "=~][^]#%"
