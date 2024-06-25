@@ -1,7 +1,14 @@
 ﻿open System
+open System.Collections.Generic
 
 [<Literal>]
-let PickCharacter = 'ø';
+let PickCharacter = 'ø'
+
+[<Literal>]
+let TrueValue = -1
+
+[<Literal>]
+let FalseValue = 0
 
 type TokenType =
     | OpenSquareBracket
@@ -80,7 +87,7 @@ let lex code =
         | h :: t when h <> '"' -> scanLiteral t (literal + string h)
         | _ ->
             match code with
-            | [] -> raise (InvalidOperationException("Found unclosed literal."))
+            | [] -> failwith "Found unclosed literal."
             | h :: t -> (t, literal)
     
     let rec doLex code tokens isInsideComment =
@@ -92,13 +99,13 @@ let lex code =
                 match head with
                 | h when h <> '}' && isInsideComment ->
                     match head with
-                    | h when h = '{' -> raise (InvalidOperationException("Opening comment inside comment is not allowed.")) 
+                    | h when h = '{' -> failwith "Opening comment inside comment is not allowed." 
                     | _ -> doLex tail tokens true 
                 | h when h = '{' -> doLex tail tokens true
                 | h when h = '}' ->
                     match isInsideComment with
                     | c when c = true -> doLex tail tokens false
-                    | _ -> raise (InvalidOperationException("Found unbalanced comment closing."))
+                    | _ -> failwith "Found unbalanced comment closing."
                 | h when Char.IsDigit(h) ->
                     let code, number = scanNumber (head :: tail) ""
                     doLex code (Number(number) :: tokens) isInsideComment
@@ -111,9 +118,49 @@ let lex code =
                 | _ -> doLex tail tokens isInsideComment            
         | [] -> tokens
         
-    let tokens = List.rev (doLex (List.ofSeq code) [] false)
+    List.rev (doLex (List.ofSeq code) [] false)
+   
+
+type StackValue =
+    | NumberValue of int
+    | ReferenceValue of string
     
-    for element in tokens do
-        printf "%A \n" element
+let popAny (stack : Stack<StackValue>) : StackValue =
+    let mutable value : StackValue = NumberValue(0)
     
-lex "=~][^2    {2}    \"ala {ma}} kota\"]#%"
+    if stack.TryPop(&value) then
+        value
+    else
+        failwith "Failed to pop from runtime stack."
+    
+let popNumber stack =
+    match popAny stack with
+    | NumberValue v -> v
+    | _ -> failwith "Failed to pop number value from runtime stack."
+    
+let pushNumber number (stack : Stack<StackValue>) =
+   stack.Push(NumberValue(number))
+    
+
+let eval code =
+    let runtimeStack = new Stack<StackValue>()
+    let tokens = lex code
+    
+    let rec doEval tokens =
+        match tokens with
+        | h :: t ->
+            match h with
+            | Number value -> pushNumber value runtimeStack
+            | Plus ->
+                let number1 = popNumber runtimeStack
+                let number2 = popNumber runtimeStack 
+                pushNumber (number1 + number2) runtimeStack
+            | Dot ->
+                popNumber runtimeStack |> printf "%d"
+            | t -> raise (NotImplementedException(string t))
+            doEval t
+        | _ -> ()
+    doEval tokens
+    ()
+    
+eval "{} 2 3 + ."
