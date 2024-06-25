@@ -83,28 +83,37 @@ let lex code =
             | [] -> raise (InvalidOperationException("Found unclosed literal."))
             | h :: t -> (t, literal)
     
-    let rec doLex code tokens =
+    let rec doLex code tokens isInsideComment =
         match code with
         | head :: tail -> 
             match parseCharacter head with
-            | Some t -> doLex tail (t :: tokens)
+            | Some t -> doLex tail (t :: tokens) isInsideComment
             | None ->
                 match head with
+                | h when h <> '}' && isInsideComment ->
+                    match head with
+                    | h when h = '{' -> raise (InvalidOperationException("Opening comment inside comment is not allowed.")) 
+                    | _ -> doLex tail tokens true 
+                | h when h = '{' -> doLex tail tokens true
+                | h when h = '}' ->
+                    match isInsideComment with
+                    | c when c = true -> doLex tail tokens false
+                    | _ -> raise (InvalidOperationException("Found unbalanced comment closing."))
                 | h when Char.IsDigit(h) ->
                     let code, number = scanNumber (head :: tail) ""
-                    doLex code (Number(number) :: tokens)
+                    doLex code (Number(number) :: tokens) isInsideComment
                 | h when Char.IsLetter(h) ->
                     let code, identifier = scanIdentifier (head :: tail) ""
-                    doLex code (Identifier(identifier) :: tokens)
+                    doLex code (Identifier(identifier) :: tokens) isInsideComment
                 | h when h = '"' ->
                     let code, literal = scanLiteral (tail) ""
-                    doLex code (Literal(literal) :: tokens)
-                | _ -> doLex tail tokens            
+                    doLex code (Literal(literal) :: tokens) isInsideComment
+                | _ -> doLex tail tokens isInsideComment            
         | [] -> tokens
         
-    let tokens = List.rev (doLex (List.ofSeq code) [])
+    let tokens = List.rev (doLex (List.ofSeq code) [] false)
     
     for element in tokens do
-        printf "%A " element
+        printf "%A \n" element
     
-lex "=~][^22\"ala ma kota\"]#%"
+lex "=~][^2    {2}    \"ala {ma}} kota\"]#%"
