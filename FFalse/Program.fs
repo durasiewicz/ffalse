@@ -141,7 +141,6 @@ let popNumber stack =
 let pushNumber number (stack : Stack<StackValue>) =
    stack.Push(NumberValue(number))
     
-
 let eval code =
     let runtimeStack = new Stack<StackValue>()
     let tokens = lex code
@@ -150,17 +149,24 @@ let eval code =
         match tokens with
         | h :: t ->
             match h with
-            | Number value -> pushNumber value runtimeStack
-            | Plus ->
+            | Plus | Minus | Asterisk | Slash ->
+                let number2 = popNumber runtimeStack
                 let number1 = popNumber runtimeStack
-                let number2 = popNumber runtimeStack 
-                pushNumber (number1 + number2) runtimeStack
-            | Dot ->
-                popNumber runtimeStack |> printf "%d"
+                
+                let result = match h with
+                             | Plus -> number1 + number2
+                             | Minus -> number1 - number2
+                             | Asterisk -> number1 * number2
+                             | Slash -> number1 / number2            
+                             | _ -> failwith ""
+                             
+                pushNumber result runtimeStack
+            | Number value -> pushNumber value runtimeStack
+            | Dot -> popNumber runtimeStack |> printf "%d"
             | t -> raise (NotImplementedException(string t))
             doEval t
         | _ -> ()
     doEval tokens
     ()
     
-eval "{} 2 3 + ."
+eval "{} 3 2 - ."
