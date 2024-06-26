@@ -6,6 +6,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Lexer.fs" />
+    <Compile Include="RuntimeStack.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
