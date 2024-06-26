@@ -140,7 +140,13 @@ let popNumber stack =
     
 let popTwoNumbers stack = (popNumber stack, popNumber stack)
 
-let pushNumber (stack : Stack<StackValue>) number  = stack.Push(NumberValue(number))
+let popThreeNumbers stack = (popNumber stack, popNumber stack, popNumber stack)
+
+let pushNumber (stack : Stack<StackValue>) number = stack.Push(NumberValue(number))
+
+let pushAny (stack : Stack<StackValue>) item = stack.Push(item)
+
+let peekAny (stack : Stack<StackValue>) index = stack.ToArray()[index]
     
 let eval code =
     let runtimeStack = new Stack<StackValue>()
@@ -173,6 +179,20 @@ let eval code =
                 (if number1 = FalseValue then TrueValue else FalseValue) |>  pushNumber runtimeStack
             | Number value -> value |> pushNumber runtimeStack 
             | Dot -> popNumber runtimeStack |> printf "%d"
+            | Dollar ->
+                let number = popNumber runtimeStack
+                pushNumber runtimeStack number
+                pushNumber runtimeStack number
+            | Backslash ->
+                let number2, number1 = popTwoNumbers runtimeStack
+                pushNumber runtimeStack number2
+                pushNumber runtimeStack number1
+            | Pick -> popNumber runtimeStack |> peekAny runtimeStack |> pushAny runtimeStack
+            | At ->
+                let number3, number2, number1 = popThreeNumbers runtimeStack
+                pushNumber runtimeStack number3
+                pushNumber runtimeStack number2
+                pushNumber runtimeStack number1
             | t -> raise (NotImplementedException(string t))
             doEval t
         | _ -> ()
