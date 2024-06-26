@@ -15,6 +15,14 @@ let eval code =
     let runtimeStack = Stack<StackValue>()
     let runtimeVariables = Dictionary<string, StackValue>()
     
+    let falseAnd (n1, n2) = if n1 = TrueValue && n2 = TrueValue then TrueValue else FalseValue
+    
+    let falseOr (n1, n2) = if n1 = TrueValue || n2 = TrueValue then TrueValue else FalseValue
+    
+    let falseEquals (n1, n2) = if n1 = n2 then TrueValue else FalseValue
+    
+    let falseNegate n = if n = FalseValue then TrueValue else FalseValue
+    
     let rec doEval tokens =
         match tokens with
         | h :: t ->
@@ -29,18 +37,10 @@ let eval code =
                              | _ -> failwith ""
                              
                 pushNumber  runtimeStack result
-            | Equals ->
-                let number2, number1 = popTwoNumbers runtimeStack
-                (if number1 = number2 then TrueValue else FalseValue) |> pushNumber runtimeStack
-            | Ampersand ->
-                let number2, number1 = popTwoNumbers runtimeStack
-                (if number1 = TrueValue && number2 = TrueValue then TrueValue else FalseValue) |> pushNumber runtimeStack
-            | Bar ->
-                let number2, number1 = popTwoNumbers runtimeStack
-                (if number1 = TrueValue || number2 = TrueValue then TrueValue else FalseValue) |> pushNumber runtimeStack 
-            | Tilde ->
-                let number1 = popNumber runtimeStack
-                (if number1 = FalseValue then TrueValue else FalseValue) |>  pushNumber runtimeStack
+            | Equals -> popTwoNumbers runtimeStack |> falseEquals |> pushNumber runtimeStack
+            | Ampersand -> popTwoNumbers runtimeStack |> falseAnd |> pushNumber runtimeStack
+            | Bar -> popTwoNumbers runtimeStack |> falseOr |> pushNumber runtimeStack 
+            | Tilde -> popNumber runtimeStack |> falseNegate |> pushNumber runtimeStack
             | Number value -> value |> pushNumber runtimeStack 
             | Dot -> popNumber runtimeStack |> printf "%d"
             | Dollar ->
@@ -76,4 +76,4 @@ let eval code =
     lex code |> doEval
     ()
     
-eval "{} 3a:a;."
+eval "{} 1 1 =."
