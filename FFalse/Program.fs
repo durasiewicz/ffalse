@@ -138,8 +138,9 @@ let popNumber stack =
     | NumberValue v -> v
     | _ -> failwith "Failed to pop number value from runtime stack."
     
-let pushNumber number (stack : Stack<StackValue>) =
-   stack.Push(NumberValue(number))
+let popTwoNumbers stack = (popNumber stack, popNumber stack)
+
+let pushNumber (stack : Stack<StackValue>) number  = stack.Push(NumberValue(number))
     
 let eval code =
     let runtimeStack = new Stack<StackValue>()
@@ -150,9 +151,7 @@ let eval code =
         | h :: t ->
             match h with
             | Plus | Minus | Asterisk | Slash ->
-                let number2 = popNumber runtimeStack
-                let number1 = popNumber runtimeStack
-                
+                let number2, number1 = popTwoNumbers runtimeStack
                 let result = match h with
                              | Plus -> number1 + number2
                              | Minus -> number1 - number2
@@ -160,8 +159,20 @@ let eval code =
                              | Slash -> number1 / number2            
                              | _ -> failwith ""
                              
-                pushNumber result runtimeStack
-            | Number value -> pushNumber value runtimeStack
+                pushNumber  runtimeStack result
+            | Equals ->
+                let number2, number1 = popTwoNumbers runtimeStack
+                (if number1 = number2 then TrueValue else FalseValue) |> pushNumber runtimeStack
+            | Ampersand ->
+                let number2, number1 = popTwoNumbers runtimeStack
+                (if number1 = TrueValue && number2 = TrueValue then TrueValue else FalseValue) |> pushNumber runtimeStack
+            | Bar ->
+                let number2, number1 = popTwoNumbers runtimeStack
+                (if number1 = TrueValue || number2 = TrueValue then TrueValue else FalseValue) |> pushNumber runtimeStack 
+            | Tilde ->
+                let number1 = popNumber runtimeStack
+                (if number1 = FalseValue then TrueValue else FalseValue) |>  pushNumber runtimeStack
+            | Number value -> value |> pushNumber runtimeStack 
             | Dot -> popNumber runtimeStack |> printf "%d"
             | t -> raise (NotImplementedException(string t))
             doEval t
@@ -169,4 +180,4 @@ let eval code =
     doEval tokens
     ()
     
-eval "{} 3 2 - ."
+eval "{} 3 4 - 1 | ."
