@@ -144,12 +144,20 @@ let popThreeNumbers stack = (popNumber stack, popNumber stack, popNumber stack)
 
 let pushNumber (stack : Stack<StackValue>) number = stack.Push(NumberValue(number))
 
+let pushReference (stack : Stack<StackValue>) name = stack.Push(ReferenceValue(name))
+
+let popReference (stack : Stack<StackValue>) =
+    match popAny stack with
+    | ReferenceValue v -> v
+    | _ -> failwith "Failed to pop reference value from runtime stack."
+
 let pushAny (stack : Stack<StackValue>) item = stack.Push(item)
 
 let peekAny (stack : Stack<StackValue>) index = stack.ToArray()[index]
     
 let eval code =
-    let runtimeStack = new Stack<StackValue>()
+    let runtimeStack = Stack<StackValue>()
+    let runtimeVariables = Dictionary<string, StackValue>()
     
     let rec doEval tokens =
         match tokens with
@@ -193,6 +201,18 @@ let eval code =
                 pushNumber runtimeStack number3
                 pushNumber runtimeStack number2
                 pushNumber runtimeStack number1
+            | Identifier i -> i |> pushReference runtimeStack
+            | Colon ->
+                let ref = popReference runtimeStack
+                let value = popNumber runtimeStack
+                runtimeVariables[ref] <- NumberValue(value)
+                ()
+            | Semicolon ->
+                let ref = popReference runtimeStack
+                runtimeVariables.TryAdd(ref, NumberValue(0)) |> ignore
+                match runtimeVariables[ref] with
+                | NumberValue v -> v |> pushNumber runtimeStack
+                | _ -> ()
             | t -> raise (NotImplementedException(string t))
             doEval t
         | _ -> ()
@@ -200,4 +220,4 @@ let eval code =
     lex code |> doEval
     ()
     
-eval "{} 3 4 - 1 | ."
+eval "{} 3a:a;."
