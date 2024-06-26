@@ -144,7 +144,6 @@ let pushNumber (stack : Stack<StackValue>) number  = stack.Push(NumberValue(numb
     
 let eval code =
     let runtimeStack = new Stack<StackValue>()
-    let tokens = lex code
     
     let rec doEval tokens =
         match tokens with
@@ -177,7 +176,8 @@ let eval code =
             | t -> raise (NotImplementedException(string t))
             doEval t
         | _ -> ()
-    doEval tokens
+        
+    lex code |> doEval
     ()
     
 eval "{} 3 4 - 1 | ."
