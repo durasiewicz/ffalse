@@ -1,5 +1,6 @@
 ﻿open System
 open System.Collections.Generic
+open System.Diagnostics
 
 [<Literal>]
 let PickCharacter = 'ø'
@@ -70,7 +71,7 @@ let parseCharacter character =
     | PickCharacter -> Some Pick
     | '§' -> Some Section
     | _ -> None
-   
+           
 let lex code =
     let rec scanNumber code (number : string) =
         match code with
@@ -88,7 +89,32 @@ let lex code =
         | _ ->
             match code with
             | [] -> failwith "Found unclosed literal."
-            | h :: t -> (t, literal)
+            | _ :: t -> (t, literal)
+            
+    let (|CommentBegin|_|) c =
+        match c with
+        | '{' -> Some CommentBegin
+        | _ -> None
+        
+    let (|CommentEnd|_|) c =
+        match c with
+        | '}' -> Some CommentEnd
+        | _ -> None
+        
+    let (|Digit|_|) c =
+        match c with
+        | c when c |> Char.IsDigit -> Some Digit
+        | _ -> None
+        
+    let (|Letter|_|) c =
+        match c with
+        | c when c |> Char.IsLetter -> Some Letter
+        | _ -> None
+        
+    let (|Quote|_|) c =
+        match c with
+        | c when c = '"' -> Some Quote
+        | _ -> None
     
     let rec doLex code tokens isInsideComment =
         match code with
@@ -101,18 +127,18 @@ let lex code =
                     match head with
                     | h when h = '{' -> failwith "Opening comment inside comment is not allowed." 
                     | _ -> doLex tail tokens true 
-                | h when h = '{' -> doLex tail tokens true
-                | h when h = '}' ->
+                | CommentBegin -> doLex tail tokens true
+                | CommentEnd ->
                     match isInsideComment with
                     | c when c = true -> doLex tail tokens false
                     | _ -> failwith "Found unbalanced comment closing."
-                | h when Char.IsDigit(h) ->
+                | Digit ->
                     let code, number = scanNumber (head :: tail) ""
                     doLex code (Number(number) :: tokens) isInsideComment
-                | h when Char.IsLetter(h) ->
+                | Letter ->
                     let code, identifier = scanIdentifier (head :: tail) ""
                     doLex code (Identifier(identifier) :: tokens) isInsideComment
-                | h when h = '"' ->
+                | Quote ->
                     let code, literal = scanLiteral (tail) ""
                     doLex code (Literal(literal) :: tokens) isInsideComment
                 | _ -> doLex tail tokens isInsideComment            
