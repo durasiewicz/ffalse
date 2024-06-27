@@ -3,8 +3,9 @@
 open System.Collections.Generic
 
 type StackValue =
-    | NumberValue of int
+    | NumberValue of int 
     | ReferenceValue of string
+    | HandleValue of int
     
 let popAny (stack : Stack<StackValue>) : StackValue =
     let mutable value : StackValue = NumberValue(0)

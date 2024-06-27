@@ -10,10 +10,14 @@ let TrueValue = -1
 
 [<Literal>]
 let FalseValue = 0
+
+[<Literal>]
+let AnonymousFunctionPrefix = "<f>_"
        
 let eval code =
     let runtimeStack = Stack<StackValue>()
     let runtimeVariables = Dictionary<string, StackValue>()
+    let functions = Dictionary<int, TokenType[]>()
     
     let falseAnd (n1, n2) = if n1 = TrueValue && n2 = TrueValue then TrueValue else FalseValue
     
@@ -22,6 +26,34 @@ let eval code =
     let falseEquals (n1, n2) = if n1 = n2 then TrueValue else FalseValue
     
     let falseNegate n = if n = FalseValue then TrueValue else FalseValue
+    
+    let compileFunctions tokens =
+        let (|FunctionBegin|_|) t = match t with | OpenSquareBracket -> Some FunctionBegin | _ -> None
+        let (|FunctionEnd|_|) t = match t with | CloseSquareBracket -> Some FunctionEnd | _ -> None
+                
+        let rec doCompileFunctions tokens compiledTokens functionHandle =
+            match tokens with
+            | h :: t ->
+                match h with
+                | FunctionBegin -> compileFunction t compiledTokens  [] (functionHandle + 1)
+                | _ -> doCompileFunctions t (h :: compiledTokens) functionHandle
+            | [] -> compiledTokens     
+        and compileFunction tokens compiledTokens functionTokens functionHandle =
+            match tokens with
+            | h :: t ->
+                match h with
+                | FunctionBegin -> doCompileFunctions (h :: t) compiledTokens functionHandle
+                | FunctionEnd ->
+                    let functionName = AnonymousFunctionPrefix + string functionHandle
+                    functions.Add(functionHandle, Array.ofList functionTokens)
+                    runtimeVariables.Add(functionName, HandleValue(functionHandle))
+                    Identifier(functionName) :: Colon ::compiledTokens 
+                | _ -> compileFunction t compiledTokens (h :: functionTokens) functionHandle
+            | [] -> failwith "Found unclosed function."
+            
+        let result = doCompileFunctions tokens [] 0
+        
+        result
     
     let rec doEval tokens =
         match tokens with
@@ -73,7 +105,7 @@ let eval code =
             doEval t
         | _ -> ()
         
-    lex code |> doEval
+    lex code |> compileFunctions |> doEval
     ()
     
-eval "{} 1 1 =."
+eval "[1 1 + .]"
