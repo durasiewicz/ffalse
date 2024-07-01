@@ -36,7 +36,7 @@ let eval code =
             | h :: t ->
                 match h with
                 | FunctionBegin -> compileFunction t compiledTokens  [] (functionHandle + 1)
-                | _ -> doCompileFunctions t (h :: compiledTokens) functionHandle
+                | _ -> doCompileFunctions t (compiledTokens @ [h]) functionHandle
             | [] -> compiledTokens     
         and compileFunction tokens compiledTokens functionTokens functionHandle =
             match tokens with
@@ -45,10 +45,10 @@ let eval code =
                 | FunctionBegin -> doCompileFunctions (h :: t) compiledTokens functionHandle
                 | FunctionEnd ->
                     let functionName = AnonymousFunctionPrefix + string functionHandle
-                    functions.Add(functionHandle, Array.ofList functionTokens)
+                    functions.Add(functionHandle, functionTokens |> Array.ofList )
                     runtimeVariables.Add(functionName, HandleValue(functionHandle))
-                    Identifier(functionName) :: Colon ::compiledTokens 
-                | _ -> compileFunction t compiledTokens (h :: functionTokens) functionHandle
+                    doCompileFunctions t (compiledTokens @ [Identifier(functionName)] @ [Semicolon]) functionHandle 
+                | _ -> compileFunction t compiledTokens (functionTokens @ [h]) functionHandle
             | [] -> failwith "Found unclosed function."
             
         let result = doCompileFunctions tokens [] 0
@@ -99,8 +99,14 @@ let eval code =
                 let ref = popReference runtimeStack
                 runtimeVariables.TryAdd(ref, NumberValue(0)) |> ignore
                 match runtimeVariables[ref] with
-                | NumberValue v -> v |> pushNumber runtimeStack
+                | HandleValue h -> h |> pushHandle runtimeStack
                 | _ -> ()
+            | Question ->
+                let handle = popHandle runtimeStack
+                match popNumber runtimeStack with
+                | TrueValue -> functions[handle] |> List.ofArray |> doEval  
+                | _ -> ()
+            | Literal v -> v |> printf "%s"
             | t -> raise (NotImplementedException(string t))
             doEval t
         | _ -> ()

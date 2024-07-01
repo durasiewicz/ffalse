@@ -2,4 +2,4 @@
 
 open FFalse.Eval
     
-eval "[1 1 + .]"
+eval "0~[\"Hello world!\" 1 1 + .]?"

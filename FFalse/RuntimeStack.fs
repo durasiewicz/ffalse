@@ -28,10 +28,17 @@ let pushNumber (stack : Stack<StackValue>) number = stack.Push(NumberValue(numbe
 
 let pushReference (stack : Stack<StackValue>) name = stack.Push(ReferenceValue(name))
 
+let pushHandle (stack : Stack<StackValue>) handle = stack.Push(HandleValue(handle))
+
 let popReference (stack : Stack<StackValue>) =
     match popAny stack with
     | ReferenceValue v -> v
     | _ -> failwith "Failed to pop reference value from runtime stack."
+    
+let popHandle (stack : Stack<StackValue>) =
+    match popAny stack with
+    | HandleValue h -> h
+    | _ -> failwith "Failed to pop handle value from runtime stack."
 
 let pushAny (stack : Stack<StackValue>) item = stack.Push(item)
 
